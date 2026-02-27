@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>论文笔记：持续对比强化学习(CCRL)</title>
+    <!-- 引入 GitHub 样式库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    
+    <!-- 引入 MathJax 用于渲染 LaTeX 数学公式 -->
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 280px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 20px; margin-top: 4px; font-size: 13px; }
+        .main-content { margin-left: 280px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 20px 0; }
+        table { display: block; width: 100%; overflow: auto; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2>目录 Navigation</h2>
+        <ul>
+            <li><a href="#1-背景与问题">1. 背景与问题</a></li>
+            <li><a href="#2-核心思路">2. 核心思路</a></li>
+            <li>
+                <a href="#3-方法详解">3. 方法详解</a>
+                <ul class="sub-menu">
+                    <li><a href="#31-环境交互机制">3.1 环境交互机制</a></li>
+                    <li><a href="#32-特征区分模块对比学习">3.2 特征区分模块（对比学习）</a></li>
+                    <li><a href="#33-故障识别模块强化学习">3.3 故障识别模块（强化学习）</a></li>
+                </ul>
+            </li>
+            <li><a href="#4-实验验证">4. 实验验证</a></li>
+            <li><a href="#5-总结">5. 总结</a></li>
+            <li><a href="#文献来源">文献来源</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content markdown-body">
+        
+        <h1>论文笔记：持续对比强化学习(Continual Contrastive Reinforcement Learning, CCRL)</h1>
+
+        <blockquote>
+            <p><strong>Environment-aware fault diagnosis of aero-engines under highly imbalance scenarios</strong></p>
+            <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+            <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+            <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.aei.2025.103297-007ec6" alt="DOI">
+            <img src="https://img.shields.io/badge/Status-Published-success" alt="Status">
+            <img src="https://img.shields.io/badge/Topic-Reinforcement%20Learning%20%7C%20Fault%20Diagnosis-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-背景与问题">1. 背景与问题</h2>
+        <p>航空发动机是飞机的核心部件，其可靠性至关重要。在实际的运维和故障诊断中，工程人员面临着三个主要挑战：</p>
+        <ol>
+            <li><strong>样本高度不平衡</strong>：发动机的设计非常精密，大部分时间处于正常运行状态，故障数据（尤其是特定类型的故障）非常稀缺。传统的深度学习模型需要大量且均衡的样本才能训练好，面对这种“正常样本多、故障样本极少”的情况，识别准确率往往大幅下降。</li>
+            <li><strong>环境动态变化</strong>：飞机的飞行环境、气候条件以及发动机自身的老化程度都在不断变化。一个在特定数据集上训练好的静态模型，很难适应未来的新情况。</li>
+            <li><strong>数据持续增长</strong>：航空公司每天都会产生大量的飞行数据，传统方法难以利用这些新数据对模型进行实时更新。</li>
+        </ol>
+        <p>为了解决上述问题，论文提出了一种名为 <strong>CCRL (Continual Contrastive Reinforcement Learning，持续对比强化学习)</strong> 的方法。该方法旨在构建一个能够像人类专家一样，在长期的环境交互中不断学习、适应新数据且能处理样本不平衡的智能体。</p>
+
+        <h2 id="2-核心思路">2. 核心思路</h2>
+        <p>该方法将故障诊断过程看作是一个<strong>智能体（Agent）与环境（Environment）交互</strong>的过程，主要包含以下创新点：</p>
+        <ul>
+            <li><strong>引入环境交互</strong>：利用航空公司实际的运营流程。飞行数据作为“状态”，地面专家的故障确认结果作为“反馈”。智能体根据反馈不断优化自身的判断策略。</li>
+            <li><strong>对比学习解决数据稀缺</strong>：针对故障样本少的问题，设计了一个对比学习编码器。它利用大量的正常样本学习通用特征，再利用少量故障样本进行微调，通过拉近同类样本距离、推远异类样本距离，提升模型对稀缺故障的辨别能力。</li>
+            <li><strong>强化学习实现持续进化</strong>：使用改进的Dueling Double Deep Q-Network (D3QN) 算法，结合针对不平衡样本设计的奖励机制，使模型能够在数据流中持续更新，而不是训练一次就停止。</li>
+        </ul>
+
+        <div align="center">
+          <img width="90%" src="https://github.com/user-attachments/assets/20c8b4d8-1214-4bc3-9d24-65bdb30497c6" />
+          <p><em>图1 CCRL整体流程示意图——智能体与环境的交互闭环</em></p>
+        </div>
+
+        <h2 id="3-方法详解">3. 方法详解</h2>
+        <p>CCRL框架主要由三个部分组成：环境构建、特征区分模块和类别识别模块。</p>
+
+        <h3 id="31-环境交互机制">3.1 环境交互机制</h3>
+        <p>在强化学习的框架下，论文将航空公司的实际运维过程抽象为“环境”：</p>
+        <ul>
+            <li><strong>输入（State）</strong>：飞机通过ACARS系统传回的传感器截面数据（如EGT、燃油流量、转速等偏差值）。</li>
+            <li><strong>动作（Action）</strong>：智能体对当前数据给出的诊断结论（是正常，还是某种特定故障）。</li>
+            <li><strong>奖励（Reward）</strong>：如果智能体判断正确（与事后专家的维修报告CNR一致），获得正向奖励；否则获得负向奖励。</li>
+        </ul>
+        <p>这种机制保证了模型可以随着每日新产生的数据流，不断地进行自我修正和迭代。</p>
+
+        <h3 id="32-特征区分模块对比学习">3.2 特征区分模块（对比学习）</h3>
+        <p>这是解决“样本太少”问题的关键。由于故障数据很少，直接训练分类器容易过拟合。本研究分两步走：</p>
+        <ol>
+            <li><strong>自编码器预训练</strong>：利用极其丰富的<strong>正常样本</strong>训练一个自编码器（Autoencoder）。目的是让网络学会如何高效地压缩和还原发动机的正常运行数据，掌握数据的基本规律。</li>
+            <li><strong>对比学习微调</strong>：基于SimCLR的思想，构建正负样本对。
+                <ul>
+                    <li><strong>正样本对</strong>：同一故障类型的不同样本。</li>
+                    <li><strong>负样本对</strong>：不同故障类型的样本。</li>
+                    <li><strong>目标</strong>：调整网络参数，使得在特征空间中，相同故障的数据点聚在一起，不同故障的数据点离得越远越好。</li>
+                </ul>
+            </li>
+        </ol>
+        <p>通过这一步，即使某类故障只有几个样本，网络也能提取出最具区分度的特征。</p>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/fed9a370-0c59-47d2-a713-6aff3935ef6c" />
+          <p><em>图2 特征区分模块示意图——利用对比学习提取稀缺故障特征</em></p>
+        </div>
+
+        <h3 id="33-故障识别模块强化学习">3.3 故障识别模块（强化学习）</h3>
+        <p>在提取到高质量特征后，论文使用 <strong>D3QN</strong> 算法进行最终的故障分类决策。</p>
+        <ul>
+            <li><strong>不平衡奖励机制</strong>：为了防止模型倾向于预测“多数类”（即正常状态），论文设计了加权奖励函数。如果模型成功识别出了稀有的故障类型，它将获得比识别出正常样本高得多的奖励权重。这迫使智能体更加关注那些“难得一见”的故障案例。</li>
+            <li><strong>双网络结构</strong>：采用策略网络（Policy Net）和目标网络（Target Net）分离的结构，提升训练的稳定性。</li>
+        </ul>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/3a4f4efe-7872-4d57-abb9-2c202cd97479" />
+          <p><em>图3 类型识别模块示意图 (a) 类型识别模块的训练过程 (b) 类型识别模块中策略网络和目标网络的结构</em></p>
+        </div>
+
+        <h2 id="4-实验验证">4. 实验验证</h2>
+        <p>论文使用了真实的 <strong>CFM56-7B</strong> 航空发动机数据集进行验证。</p>
+
+        <p><strong>表 1：不同方法在真实航空发动机数据集上的性能对比（%）</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th align="left">方法 (Method)</th>
+                    <th align="center">F1 分数 (F1 Score)</th>
+                    <th align="center">精确率 (Precision)</th>
+                    <th align="center">召回率 (Recall)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td align="left">D3QN</td>
+                    <td align="center">77.19 ± 3.81</td>
+                    <td align="center">80.71 ± 4.15</td>
+                    <td align="center">76.75 ± 3.88</td>
+                </tr>
+                <tr>
+                    <td align="left">DS + D3QN (欠采样)</td>
+                    <td align="center">68.15 ± 9.26</td>
+                    <td align="center">71.05 ± 9.10</td>
+                    <td align="center">68.00 ± 9.14</td>
+                </tr>
+                <tr>
+                    <td align="left">OS + D3QN (过采样)</td>
+                    <td align="center">74.38 ± 5.07</td>
+                    <td align="center">81.20 ± 3.66</td>
+                    <td align="center">74.00 ± 4.90</td>
+                </tr>
+                <tr>
+                    <td align="left"><strong>CCRL (本文方法)</strong></td>
+                    <td align="center"><strong>84.26 ± 4.62</strong></td>
+                    <td align="center"><strong>87.19 ± 4.34</strong></td>
+                    <td align="center"><strong>84.00 ± 4.77</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <ul>
+            <li><strong>数据构成</strong>：包含正常样本以及三种典型故障：可变放气阀（VBV）故障、排气温度传感器（EGTI）故障、总温传感器（TAT）故障。其中故障样本数量极少（例如训练集中某类故障仅有14个样本），属于高度不平衡场景。</li>
+            <li><strong>对比基准</strong>：
+                <ol>
+                    <li>D3QN（原始强化学习）</li>
+                    <li>DS+D3QN（欠采样+强化学习）</li>
+                    <li>OS+D3QN（过采样+强化学习）</li>
+                </ol>
+            </li>
+            <li><strong>实验结果</strong>：
+                <ul>
+                    <li><strong>F1分数</strong>：CCRL达到了84.26%，显著优于对比方法（其它方法在68%-77%之间）。</li>
+                    <li><strong>稳定性</strong>：在多次重复实验中，CCRL的标准差最小，说明模型在面对随机性时表现最稳定。</li>
+                    <li><strong>混淆矩阵分析</strong>：CCRL在稀缺故障（如EGTI）上的误报率和漏报率均低于传统的数据增强方法。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="5-总结">5. 总结</h2>
+        <p>论文提出的CCRL方法，通过结合对比学习对特征的提取能力和强化学习的持续决策能力，有效地解决了航空发动机故障诊断中数据不平衡和环境动态变化的难题。它不需要凭空生成虚拟数据（如GAN），而是充分挖掘现有数据的价值，为工业界在小样本条件下的设备维护提供了一种新的解决思路。</p>
+
+        <hr>
+
+        <h2 id="文献来源">文献来源</h2>
+        <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+        <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+        <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+
+    </main>
+
+</body>
+</html>

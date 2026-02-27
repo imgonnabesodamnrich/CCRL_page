@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論文ノート：継続的対照強化学習 (CCRL)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 280px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 20px; margin-top: 4px; font-size: 13px; }
+        .main-content { margin-left: 280px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 20px 0; }
+        table { display: block; width: 100%; overflow: auto; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2>目次</h2>
+        <ul>
+            <li><a href="#1-背景と問題">1. 背景と問題</a></li>
+            <li><a href="#2-核心的なアイデア">2. 核心的なアイデア</a></li>
+            <li>
+                <a href="#3-手法の詳細">3. 手法の詳細</a>
+                <ul class="sub-menu">
+                    <li><a href="#31-環境相互作用メカニズム">3.1 環境相互作用メカニズム</a></li>
+                    <li><a href="#32-特徴識別モジュール対照学習">3.2 特徴識別モジュール（対照学習）</a></li>
+                    <li><a href="#33-故障識別モジュール強化学習">3.3 故障識別モジュール（強化学習）</a></li>
+                </ul>
+            </li>
+            <li><a href="#4-実験検証">4. 実験検証</a></li>
+            <li><a href="#5-まとめ">5. まとめ</a></li>
+            <li><a href="#文献情報">文献情報</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content markdown-body">
+        
+        <h1>論文ノート：継続的対照強化学習 (Continual Contrastive Reinforcement Learning, CCRL)</h1>
+
+        <blockquote>
+            <p><strong>Environment-aware fault diagnosis of aero-engines under highly imbalance scenarios</strong></p>
+            <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+            <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+            <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.aei.2025.103297-007ec6" alt="DOI">
+            <img src="https://img.shields.io/badge/Status-Published-success" alt="Status">
+            <img src="https://img.shields.io/badge/Topic-Reinforcement%20Learning%20%7C%20Fault%20Diagnosis-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-背景と問題">1. 背景と問題</h2>
+        <p>航空エンジンは航空機の中核部品であり、その信頼性は極めて重要です。実際の運用保守や故障診断において、エンジニアは主に3つの課題に直面しています：</p>
+        <ol>
+            <li><strong>サンプルの高度な不均衡</strong>：エンジンの設計は非常に精密であり、大半の時間は正常に動作しているため、故障データ（特に特定タイプの故障）は非常に稀少です。従来の深層学習モデルは、トレーニングに大量かつ均衡のとれたサンプルを必要とするため、「正常サンプルが多く、故障サンプルが極めて少ない」状況では、認識精度が大幅に低下します。</li>
+            <li><strong>環境の動的変化</strong>：飛行環境、気候条件、およびエンジン自体の経年劣化は絶えず変化しています。特定のデータセットでトレーニングされた静的モデルは、将来の新しい状況に適応することが困難です。</li>
+            <li><strong>データの継続的増加</strong>：航空会社は毎日大量の飛行データを生成していますが、従来の方法ではこれらの新しいデータを利用してモデルをリアルタイムで更新することは困難です。</li>
+        </ol>
+        <p>これらの問題を解決するために、論文では <strong>CCRL (Continual Contrastive Reinforcement Learning、継続的対照強化学習)</strong> という手法を提案しています。この手法は、人間の専門家のように、長期的な環境相互作用の中で継続的に学習し、新しいデータに適応し、サンプルの不均衡を処理できるエージェントを構築することを目的としています。</p>
+
+        <h2 id="2-核心的なアイデア">2. 核心的なアイデア</h2>
+        <p>本手法は、故障診断プロセスを<strong>エージェント（Agent）と環境（Environment）の相互作用</strong>のプロセスと見なしており、主に以下の革新的な点を含んでいます：</p>
+        <ul>
+            <li><strong>環境相互作用の導入</strong>：航空会社の実際の運用プロセスを利用します。飛行データは「状態」、地上の専門家による故障確認結果は「フィードバック」として機能します。エージェントはフィードバックに基づいて自身の判断戦略を継続的に最適化します。</li>
+            <li><strong>データ不足を解決する対照学習</strong>：故障サンプルが少ない問題に対処するため、対照学習エンコーダーを設計しました。大量の正常サンプルを利用して一般的な特徴を学習し、少量の故障サンプルを利用して微調整を行うことで、同じ種類のサンプル間の距離を縮め、異なる種類のサンプル間の距離を広げ、稀少な故障に対するモデルの識別能力を向上させます。</li>
+            <li><strong>継続的進化を実現する強化学習</strong>：改良されたDueling Double Deep Q-Network (D3QN) アルゴリズムを使用し、不均衡なサンプル向けに設計された報酬メカニズムを組み合わせることで、モデルが一度のトレーニングで停止するのではなく、データストリームの中で継続的に更新できるようにします。</li>
+        </ul>
+
+        <div align="center">
+          <img width="90%" src="https://github.com/user-attachments/assets/20c8b4d8-1214-4bc3-9d24-65bdb30497c6" />
+          <p><em>図1 CCRL全体のプロセスの概略図——エージェントと環境の相互作用ループ</em></p>
+        </div>
+
+        <h2 id="3-手法の詳細">3. 手法の詳細</h2>
+        <p>CCRLフレームワークは主に、環境構築、特徴識別モジュール、カテゴリ識別モジュールの3つの部分で構成されています。</p>
+
+        <h3 id="31-環境相互作用メカニズム">3.1 環境相互作用メカニズム</h3>
+        <p>強化学習の枠組みの下で、論文は航空会社の実際の運用保守プロセスを「環境」として抽象化しています：</p>
+        <ul>
+            <li><strong>入力（State）</strong>：ACARSシステムを通じて航空機から送信されるセンサーの断面データ（EGT、燃料流量、回転数などの偏差値など）。</li>
+            <li><strong>行動（Action）</strong>：現在のデータに基づいてエージェントが出す診断結論（正常か、特定の故障か）。</li>
+            <li><strong>報酬（Reward）</strong>：エージェントの判断が正しい場合（事後の専門家による整備報告書CNRと一致する場合）、正の報酬を獲得します。そうでない場合は負の報酬を獲得します。</li>
+        </ul>
+        <p>このメカニズムにより、モデルは毎日新しく生成されるデータストリームに伴い、継続的に自己修正と反復を行うことができます。</p>
+
+        <h3 id="32-特徴識別モジュール対照学習">3.2 特徴識別モジュール（対照学習）</h3>
+        <p>これは「サンプルが少なすぎる」問題を解決するための鍵です。故障データが非常に少ないため、分類器を直接トレーニングすると過学習しやすくなります。本研究では2つのステップを踏みます：</p>
+        <ol>
+            <li><strong>オートエンコーダーによる事前学習</strong>：極めて豊富な<strong>正常サンプル</strong>を利用してオートエンコーダー（Autoencoder）をトレーニングします。目的は、ネットワークにエンジンの正常動作データを効率的に圧縮および復元する方法を学習させ、データの基本的な法則を把握させることです。</li>
+            <li><strong>対照学習による微調整</strong>：SimCLRの考え方に基づき、正と負のサンプルペアを構築します。
+                <ul>
+                    <li><strong>正のサンプルペア</strong>：同一故障タイプの異なるサンプル。</li>
+                    <li><strong>負のサンプルペア</strong>：異なる故障タイプのサンプル。</li>
+                    <li><strong>目標</strong>：特徴空間において、同じ故障のデータポイントが集まり、異なる故障のデータポイントができるだけ離れるようにネットワークパラメータを調整します。</li>
+                </ul>
+            </li>
+        </ol>
+        <p>このステップにより、ある故障カテゴリのサンプルが数個しかなくても、ネットワークは最も区別しやすい特徴を抽出できます。</p>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/fed9a370-0c59-47d2-a713-6aff3935ef6c" />
+          <p><em>図2 特徴識別モジュールの概略図——対照学習を利用して稀少な故障特徴を抽出</em></p>
+        </div>
+
+        <h3 id="33-故障識別モジュール強化学習">3.3 故障識別モジュール（強化学習）</h3>
+        <p>高品質な特徴を抽出した後、論文では <strong>D3QN</strong> アルゴリズムを使用して最終的な故障分類の決定を行います。</p>
+        <ul>
+            <li><strong>不均衡な報酬メカニズム</strong>：モデルが「多数派クラス」（つまり正常状態）を予測する傾向を防ぐため、論文では加重報酬関数を設計しました。モデルが稀少な故障タイプを正常に識別できた場合、正常サンプルを識別した場合よりもはるかに高い報酬重みを獲得します。これにより、エージェントは「滅多に見られない」故障ケースにより注目するようになります。</li>
+            <li><strong>デュアルネットワーク構造</strong>：ポリシーネットワーク（Policy Net）とターゲットネットワーク（Target Net）を分離した構造を採用し、トレーニングの安定性を向上させます。</li>
+        </ul>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/3a4f4efe-7872-4d57-abb9-2c202cd97479" />
+          <p><em>図3 カテゴリ識別モジュールの概略図 (a) カテゴリ識別モジュールのトレーニングプロセス (b) カテゴリ識別モジュールのポリシーネットワークとターゲットネットワークの構造</em></p>
+        </div>
+
+        <h2 id="4-実験検証">4. 実験検証</h2>
+        <p>論文では、実際の <strong>CFM56-7B</strong> 航空エンジンデータセットを使用して検証を行いました。</p>
+
+        <p><strong>表 1：実際の航空エンジンデータセットにおける異なる手法の性能比較（%）</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th align="left">手法 (Method)</th>
+                    <th align="center">F1スコア (F1 Score)</th>
+                    <th align="center">適合率 (Precision)</th>
+                    <th align="center">再現率 (Recall)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td align="left">D3QN</td>
+                    <td align="center">77.19 ± 3.81</td>
+                    <td align="center">80.71 ± 4.15</td>
+                    <td align="center">76.75 ± 3.88</td>
+                </tr>
+                <tr>
+                    <td align="left">DS + D3QN (アンダーサンプリング)</td>
+                    <td align="center">68.15 ± 9.26</td>
+                    <td align="center">71.05 ± 9.10</td>
+                    <td align="center">68.00 ± 9.14</td>
+                </tr>
+                <tr>
+                    <td align="left">OS + D3QN (オーバーサンプリング)</td>
+                    <td align="center">74.38 ± 5.07</td>
+                    <td align="center">81.20 ± 3.66</td>
+                    <td align="center">74.00 ± 4.90</td>
+                </tr>
+                <tr>
+                    <td align="left"><strong>CCRL (提案手法)</strong></td>
+                    <td align="center"><strong>84.26 ± 4.62</strong></td>
+                    <td align="center"><strong>87.19 ± 4.34</strong></td>
+                    <td align="center"><strong>84.00 ± 4.77</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <ul>
+            <li><strong>データ構成</strong>：正常サンプルおよび3つの典型的な故障（可変ブリードバルブ（VBV）故障、排気ガス温度センサー（EGTI）故障、全温度センサー（TAT）故障）を含みます。その中で故障サンプルの数は極めて少なく（例：トレーニングセット内のある故障カテゴリはわずか14サンプル）、高度に不均衡なシナリオに属します。</li>
+            <li><strong>比較ベースライン</strong>：
+                <ol>
+                    <li>D3QN（オリジナルの強化学習）</li>
+                    <li>DS+D3QN（アンダーサンプリング+強化学習）</li>
+                    <li>OS+D3QN（オーバーサンプリング+強化学習）</li>
+                </ol>
+            </li>
+            <li><strong>実験結果</strong>：
+                <ul>
+                    <li><strong>F1スコア</strong>：CCRLは 84.26% に達し、比較手法（他は68%-77%の間）よりも有意に優れていました。</li>
+                    <li><strong>安定性</strong>：複数回の繰り返し実験において、CCRLの標準偏差は最小であり、ランダム性に直面した際にモデルが最も安定して動作することを示しています。</li>
+                    <li><strong>混同行列分析</strong>：稀少な故障（EGTIなど）におけるCCRLの誤報率と見逃し率は、従来のデータ拡張手法よりも低くなりました。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="5-まとめ">5. まとめ</h2>
+        <p>論文で提案されたCCRL手法は、対照学習による特徴抽出能力と強化学習による継続的な意思決定能力を組み合わせることで、航空エンジン故障診断におけるデータの不均衡と環境の動的変化という難題を効果的に解決しました。GANのように架空のデータを生成する必要はなく、既存のデータの価値を十分に掘り起こし、小規模サンプル条件下での設備メンテナンスに対して、産業界に新しい解決策を提供しました。</p>
+
+        <hr>
+
+        <h2 id="文献情報">文献情報</h2>
+        <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+        <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+        <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+
+    </main>
+
+</body>
+</html>

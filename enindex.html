@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Notes: Continual Contrastive Reinforcement Learning (CCRL)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 280px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 20px; margin-top: 4px; font-size: 13px; }
+        .main-content { margin-left: 280px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 20px 0; }
+        table { display: block; width: 100%; overflow: auto; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#1-background-and-problem">1. Background and Problem</a></li>
+            <li><a href="#2-core-idea">2. Core Idea</a></li>
+            <li>
+                <a href="#3-methodology">3. Methodology</a>
+                <ul class="sub-menu">
+                    <li><a href="#31-environment-interaction-mechanism">3.1 Environment Interaction</a></li>
+                    <li><a href="#32-feature-discrimination-module-contrastive-learning">3.2 Feature Discrimination Module</a></li>
+                    <li><a href="#33-fault-identification-module-reinforcement-learning">3.3 Fault Identification Module</a></li>
+                </ul>
+            </li>
+            <li><a href="#4-experimental-verification">4. Experimental Verification</a></li>
+            <li><a href="#5-conclusion">5. Conclusion</a></li>
+            <li><a href="#literature-source">Literature Source</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content markdown-body">
+        
+        <h1>Paper Notes: Continual Contrastive Reinforcement Learning (CCRL)</h1>
+
+        <blockquote>
+            <p><strong>Environment-aware fault diagnosis of aero-engines under highly imbalance scenarios</strong></p>
+            <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+            <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+            <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.aei.2025.103297-007ec6" alt="DOI">
+            <img src="https://img.shields.io/badge/Status-Published-success" alt="Status">
+            <img src="https://img.shields.io/badge/Topic-Reinforcement%20Learning%20%7C%20Fault%20Diagnosis-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-background-and-problem">1. Background and Problem</h2>
+        <p>Aero-engines are core components of aircraft, and their reliability is crucial. In actual operation and fault diagnosis, engineers face three main challenges:</p>
+        <ol>
+            <li><strong>Highly Imbalanced Samples</strong>: Engine design is very precise, operating normally most of the time, making fault data (especially specific types) very scarce. Traditional deep learning models require large and balanced samples for training. Facing "many normal samples, few fault samples," recognition accuracy often drops significantly.</li>
+            <li><strong>Dynamic Environment Changes</strong>: Flight environments, climatic conditions, and engine aging are constantly changing. A static model trained on a specific dataset struggles to adapt to future new situations.</li>
+            <li><strong>Continuous Data Growth</strong>: Airlines generate massive amounts of flight data daily, and traditional methods find it difficult to use this new data to update models in real-time.</li>
+        </ol>
+        <p>To address these issues, the paper proposes a method called <strong>CCRL (Continual Contrastive Reinforcement Learning)</strong>. This method aims to build an agent capable of learning continuously like human experts in long-term environmental interactions, adapting to new data, and handling sample imbalance.</p>
+
+        <h2 id="2-core-idea">2. Core Idea</h2>
+        <p>The method views the fault diagnosis process as an <strong>Agent-Environment Interaction</strong> process, including the following innovations:</p>
+        <ul>
+            <li><strong>Introduction of Environment Interaction</strong>: Utilizes the actual operation process of airlines. Flight data serves as "State," and ground expert fault confirmation results serve as "Feedback." The agent continuously optimizes its judgment strategy based on feedback.</li>
+            <li><strong>Contrastive Learning for Data Scarcity</strong>: Designing a contrastive learning encoder for the problem of few fault samples. It uses abundant normal samples to learn general features, then fine-tunes with few fault samples to improve discrimination ability for rare faults by pulling similar samples closer and pushing dissimilar ones apart.</li>
+            <li><strong>Reinforcement Learning for Continual Evolution</strong>: Uses an improved Dueling Double Deep Q-Network (D3QN) algorithm combined with a reward mechanism designed for imbalanced samples, allowing the model to update continuously in the data stream instead of stopping after one training session.</li>
+        </ul>
+
+        <div align="center">
+          <img width="90%" src="https://github.com/user-attachments/assets/20c8b4d8-1214-4bc3-9d24-65bdb30497c6" />
+          <p><em>Fig 1. Schematic diagram of the overall CCRL process — Interaction loop between agent and environment</em></p>
+        </div>
+
+        <h2 id="3-methodology">3. Methodology</h2>
+        <p>The CCRL framework mainly consists of three parts: Environment Construction, Feature Discrimination Module, and Category Identification Module.</p>
+
+        <h3 id="31-environment-interaction-mechanism">3.1 Environment Interaction Mechanism</h3>
+        <p>Under the reinforcement learning framework, the paper abstracts the actual airline operation process into an "Environment":</p>
+        <ul>
+            <li><strong>Input (State)</strong>: Sensor cross-sectional data transmitted by the aircraft via ACARS system (e.g., deviation values of EGT, fuel flow, speed, etc.).</li>
+            <li><strong>Action</strong>: The diagnostic conclusion given by the agent based on current data (normal or a specific fault).</li>
+            <li><strong>Reward</strong>: If the agent judges correctly (consistent with the post-event expert maintenance report CNR), it receives a positive reward; otherwise, a negative reward.</li>
+        </ul>
+        <p>This mechanism ensures that the model can continuously self-correct and iterate with daily new data streams.</p>
+
+        <h3 id="32-feature-discrimination-module-contrastive-learning">3.2 Feature Discrimination Module (Contrastive Learning)</h3>
+        <p>This is key to solving the "too few samples" problem. Since fault data is scarce, direct classifier training is prone to overfitting. This study takes two steps:</p>
+        <ol>
+            <li><strong>Autoencoder Pre-training</strong>: Uses extremely abundant <strong>normal samples</strong> to train an Autoencoder. The purpose is to let the network learn how to efficiently compress and restore normal engine operation data and master basic data laws.</li>
+            <li><strong>Contrastive Learning Fine-tuning</strong>: Based on the idea of SimCLR, constructs positive and negative sample pairs.
+                <ul>
+                    <li><strong>Positive Pairs</strong>: Different samples of the same fault type.</li>
+                    <li><strong>Negative Pairs</strong>: Samples of different fault types.</li>
+                    <li><strong>Goal</strong>: Adjust network parameters so that data points of the same fault cluster together in feature space, while different faults are as far apart as possible.</li>
+                </ul>
+            </li>
+        </ol>
+        <p>Through this step, even if a fault category has only a few samples, the network can extract the most distinguishing features.</p>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/fed9a370-0c59-47d2-a713-6aff3935ef6c" />
+          <p><em>Fig 2. Schematic of Feature Discrimination Module — Extracting scarce fault features using contrastive learning</em></p>
+        </div>
+
+        <h3 id="33-fault-identification-module-reinforcement-learning">3.3 Fault Identification Module (Reinforcement Learning)</h3>
+        <p>After extracting high-quality features, the paper uses the <strong>D3QN</strong> algorithm for final fault classification decisions.</p>
+        <ul>
+            <li><strong>Imbalanced Reward Mechanism</strong>: To prevent the model from tending to predict the "majority class" (normal state), a weighted reward function is designed. If the model successfully identifies rare fault types, it receives a much higher reward weight than identifying normal samples. This forces the agent to pay more attention to "rare" fault cases.</li>
+            <li><strong>Dual Network Structure</strong>: Adopts a separate structure for Policy Net and Target Net to improve training stability.</li>
+        </ul>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/3a4f4efe-7872-4d57-abb9-2c202cd97479" />
+          <p><em>Fig 3. Schematic of Category Identification Module (a) Training process (b) Structure of Policy Net and Target Net</em></p>
+        </div>
+
+        <h2 id="4-experimental-verification">4. Experimental Verification</h2>
+        <p>The paper used real <strong>CFM56-7B</strong> aero-engine datasets for verification.</p>
+
+        <p><strong>Table 1: Performance comparison of different methods on real aero-engine datasets (%)</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th align="left">Method</th>
+                    <th align="center">F1 Score</th>
+                    <th align="center">Precision</th>
+                    <th align="center">Recall</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td align="left">D3QN</td>
+                    <td align="center">77.19 ± 3.81</td>
+                    <td align="center">80.71 ± 4.15</td>
+                    <td align="center">76.75 ± 3.88</td>
+                </tr>
+                <tr>
+                    <td align="left">DS + D3QN (Under-sampling)</td>
+                    <td align="center">68.15 ± 9.26</td>
+                    <td align="center">71.05 ± 9.10</td>
+                    <td align="center">68.00 ± 9.14</td>
+                </tr>
+                <tr>
+                    <td align="left">OS + D3QN (Over-sampling)</td>
+                    <td align="center">74.38 ± 5.07</td>
+                    <td align="center">81.20 ± 3.66</td>
+                    <td align="center">74.00 ± 4.90</td>
+                </tr>
+                <tr>
+                    <td align="left"><strong>CCRL (Proposed)</strong></td>
+                    <td align="center"><strong>84.26 ± 4.62</strong></td>
+                    <td align="center"><strong>87.19 ± 4.34</strong></td>
+                    <td align="center"><strong>84.00 ± 4.77</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <ul>
+            <li><strong>Data Composition</strong>: Includes normal samples and three typical faults: Variable Bleed Valve (VBV) fault, Exhaust Gas Temperature Indication (EGTI) fault, Total Air Temperature (TAT) sensor fault. Fault samples are extremely scarce (e.g., only 14 samples for a certain fault in the training set), belonging to a highly imbalanced scenario.</li>
+            <li><strong>Baselines</strong>:
+                <ol>
+                    <li>D3QN (Original Reinforcement Learning)</li>
+                    <li>DS+D3QN (Under-sampling + RL)</li>
+                    <li>OS+D3QN (Over-sampling + RL)</li>
+                </ol>
+            </li>
+            <li><strong>Experimental Results</strong>:
+                <ul>
+                    <li><strong>F1 Score</strong>: CCRL reached 84.26%, significantly outperforming baseline methods (others between 68%-77%).</li>
+                    <li><strong>Stability</strong>: In multiple repeated experiments, CCRL had the smallest standard deviation, indicating the most stable performance against randomness.</li>
+                    <li><strong>Confusion Matrix Analysis</strong>: CCRL's false positive and false negative rates on scarce faults (like EGTI) were lower than traditional data augmentation methods.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="5-conclusion">5. Conclusion</h2>
+        <p>The proposed CCRL method effectively solves the difficulties of data imbalance and dynamic environmental changes in aero-engine fault diagnosis by combining the feature extraction capability of contrastive learning with the continuous decision-making capability of reinforcement learning. It does not need to generate virtual data (like GAN) out of thin air, but fully exploits the value of existing data, providing a new solution for industrial equipment maintenance under small sample conditions.</p>
+
+        <hr>
+
+        <h2 id="literature-source">Literature Source</h2>
+        <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+        <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+        <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+
+    </main>
+
+</body>
+</html>

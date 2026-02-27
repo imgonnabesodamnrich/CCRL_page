@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>논문 노트: 지속적 대조 강화 학습 (CCRL)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 280px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 20px; margin-top: 4px; font-size: 13px; }
+        .main-content { margin-left: 280px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 20px 0; }
+        table { display: block; width: 100%; overflow: auto; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2>목차</h2>
+        <ul>
+            <li><a href="#1-배경-및-문제">1. 배경 및 문제</a></li>
+            <li><a href="#2-핵심-아이디어">2. 핵심 아이디어</a></li>
+            <li>
+                <a href="#3-방법론-상세">3. 방법론 상세</a>
+                <ul class="sub-menu">
+                    <li><a href="#31-환경-상호작용-메커니즘">3.1 환경 상호작용 메커니즘</a></li>
+                    <li><a href="#32-특징-구별-모듈-대조-학습">3.2 특징 구별 모듈 (대조 학습)</a></li>
+                    <li><a href="#33-고장-식별-모듈-강화-학습">3.3 고장 식별 모듈 (강화 학습)</a></li>
+                </ul>
+            </li>
+            <li><a href="#4-실험-검증">4. 실험 검증</a></li>
+            <li><a href="#5-요약">5. 요약</a></li>
+            <li><a href="#문헌-출처">문헌 출처</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content markdown-body">
+        
+        <h1>논문 노트: 지속적 대조 강화 학습 (Continual Contrastive Reinforcement Learning, CCRL)</h1>
+
+        <blockquote>
+            <p><strong>Environment-aware fault diagnosis of aero-engines under highly imbalance scenarios</strong></p>
+            <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+            <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+            <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.aei.2025.103297-007ec6" alt="DOI">
+            <img src="https://img.shields.io/badge/Status-Published-success" alt="Status">
+            <img src="https://img.shields.io/badge/Topic-Reinforcement%20Learning%20%7C%20Fault%20Diagnosis-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-배경-및-문제">1. 배경 및 문제</h2>
+        <p>항공 엔진은 항공기의 핵심 부품이며 신뢰성이 매우 중요합니다. 실제 운영 유지 보수 및 고장 진단에서 엔지니어는 세 가지 주요 과제에 직면합니다:</p>
+        <ol>
+            <li><strong>샘플의 높은 불균형</strong>: 엔진 설계는 매우 정밀하여 대부분의 시간 동안 정상 작동 상태에 있으므로 고장 데이터(특히 특정 유형의 고장)가 매우 희소합니다. 기존의 딥러닝 모델은 훈련을 위해 대량의 균형 잡힌 샘플이 필요하므로 "정상 샘플은 많고 고장 샘플은 극히 적은" 상황에서는 인식 정확도가 크게 떨어집니다.</li>
+            <li><strong>환경의 동적 변화</strong>: 비행 환경, 기후 조건 및 엔진 자체의 노화 정도는 끊임없이 변화합니다. 특정 데이터 세트에서 훈련된 정적 모델은 미래의 새로운 상황에 적응하기 어렵습니다.</li>
+            <li><strong>데이터의 지속적 증가</strong>: 항공사는 매일 대량의 비행 데이터를 생성하지만 기존 방법으로는 이러한 새로운 데이터를 사용하여 모델을 실시간으로 업데이트하기 어렵습니다.</li>
+        </ol>
+        <p>위의 문제를 해결하기 위해 논문에서는 <strong>CCRL (Continual Contrastive Reinforcement Learning, 지속적 대조 강화 학습)</strong>이라는 방법을 제안합니다. 이 방법은 인간 전문가처럼 장기적인 환경 상호 작용에서 지속적으로 학습하고 새로운 데이터에 적응하며 샘플 불균형을 처리할 수 있는 에이전트를 구축하는 것을 목표로 합니다.</p>
+
+        <h2 id="2-핵심-아이디어">2. 핵심 아이디어</h2>
+        <p>이 방법은 고장 진단 과정을 <strong>에이전트(Agent)와 환경(Environment)의 상호 작용</strong> 과정으로 간주하며 다음과 같은 혁신적인 점을 포함합니다:</p>
+        <ul>
+            <li><strong>환경 상호 작용 도입</strong>: 항공사의 실제 운영 프로세스를 활용합니다. 비행 데이터는 "상태(State)"로, 지상 전문가의 고장 확인 결과는 "피드백(Feedback)"으로 사용됩니다. 에이전트는 피드백을 바탕으로 자체 판단 전략을 지속적으로 최적화합니다.</li>
+            <li><strong>데이터 희소성을 해결하기 위한 대조 학습</strong>: 고장 샘플이 적은 문제에 대해 대조 학습 인코더를 설계했습니다. 풍부한 정상 샘플을 사용하여 일반적인 특징을 학습한 다음 소량의 고장 샘플을 사용하여 미세 조정함으로써, 특징 공간에서 동일한 유형의 샘플 간 거리를 좁히고 다른 유형의 샘플 간 거리를 넓혀 희소 고장에 대한 모델의 식별 능력을 향상시킵니다.</li>
+            <li><strong>지속적인 진화를 위한 강화 학습</strong>: 개선된 Dueling Double Deep Q-Network (D3QN) 알고리즘을 사용하고 불균형 샘플을 위해 설계된 보상 메커니즘을 결합하여 모델이 한 번의 훈련으로 멈추지 않고 데이터 스트림에서 지속적으로 업데이트될 수 있도록 합니다.</li>
+        </ul>
+
+        <div align="center">
+          <img width="90%" src="https://github.com/user-attachments/assets/20c8b4d8-1214-4bc3-9d24-65bdb30497c6" />
+          <p><em>그림 1 CCRL 전체 프로세스 개략도——에이전트와 환경의 상호 작용 루프</em></p>
+        </div>
+
+        <h2 id="3-방법론-상세">3. 방법론 상세</h2>
+        <p>CCRL 프레임워크는 주로 환경 구축, 특징 구별 모듈 및 범주 식별 모듈의 세 부분으로 구성됩니다.</p>
+
+        <h3 id="31-환경-상호작용-메커니즘">3.1 환경 상호작용 메커니즘</h3>
+        <p>강화 학습 프레임워크 하에서 논문은 항공사의 실제 운영 유지 보수 프로세스를 "환경"으로 추상화합니다:</p>
+        <ul>
+            <li><strong>입력 (State)</strong>: ACARS 시스템을 통해 항공기에서 전송된 센서 단면 데이터(예: EGT, 연료 흐름, 회전 속도 등의 편차 값).</li>
+            <li><strong>행동 (Action)</strong>: 현재 데이터를 기반으로 에이전트가 내리는 진단 결론(정상 또는 특정 고장).</li>
+            <li><strong>보상 (Reward)</strong>: 에이전트의 판단이 올바르면(사후 전문가 유지 보수 보고서 CNR과 일치하면) 긍정적인 보상을 얻고, 그렇지 않으면 부정적인 보상을 얻습니다.</li>
+        </ul>
+        <p>이 메커니즘은 모델이 매일 새로 생성되는 데이터 스트림에 따라 지속적으로 자체 수정 및 반복을 수행할 수 있도록 보장합니다.</p>
+
+        <h3 id="32-특징-구별-모듈-대조-학습">3.2 특징 구별 모듈 (대조 학습)</h3>
+        <p>이것은 "샘플이 너무 적은" 문제를 해결하는 핵심입니다. 고장 데이터가 매우 적기 때문에 분류기를 직접 훈련하면 과적합되기 쉽습니다. 본 연구는 두 단계로 진행됩니다:</p>
+        <ol>
+            <li><strong>오토인코더 사전 훈련</strong>: 매우 풍부한 <strong>정상 샘플</strong>을 사용하여 오토인코더(Autoencoder)를 훈련합니다. 목적은 네트워크가 엔진의 정상 작동 데이터를 효율적으로 압축 및 복원하는 방법을 학습하고 데이터의 기본 법칙을 파악하도록 하는 것입니다.</li>
+            <li><strong>대조 학습 미세 조정</strong>: SimCLR의 아이디어를 기반으로 긍정 및 부정 샘플 쌍을 구축합니다.
+                <ul>
+                    <li><strong>긍정 샘플 쌍</strong>: 동일한 고장 유형의 다른 샘플.</li>
+                    <li><strong>부정 샘플 쌍</strong>: 다른 고장 유형의 샘플.</li>
+                    <li><strong>목표</strong>: 특징 공간에서 동일한 고장의 데이터 포인트가 함께 모이고 다른 고장의 데이터 포인트가 가능한 한 멀리 떨어지도록 네트워크 매개변수를 조정합니다.</li>
+                </ul>
+            </li>
+        </ol>
+        <p>이 단계를 통해 특정 고장 범주의 샘플이 몇 개뿐이더라도 네트워크는 가장 구별되는 특징을 추출할 수 있습니다.</p>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/fed9a370-0c59-47d2-a713-6aff3935ef6c" />
+          <p><em>그림 2 특징 구별 모듈 개략도——대조 학습을 사용하여 희소 고장 특징 추출</em></p>
+        </div>
+
+        <h3 id="33-고장-식별-모듈-강화-학습">3.3 고장 식별 모듈 (강화 학습)</h3>
+        <p>고품질 특징을 추출한 후 논문에서는 <strong>D3QN</strong> 알고리즘을 사용하여 최종 고장 분류 결정을 내립니다.</p>
+        <ul>
+            <li><strong>불균형 보상 메커니즘</strong>: 모델이 "다수 클래스"(즉, 정상 상태)를 예측하려는 경향을 방지하기 위해 가중 보상 함수를 설계했습니다. 모델이 희귀 고장 유형을 성공적으로 식별하면 정상 샘플을 식별하는 것보다 훨씬 높은 보상 가중치를 받습니다. 이를 통해 에이전트는 "보기 드문" 고장 사례에 더 많은 관심을 기울이게 됩니다.</li>
+            <li><strong>이중 네트워크 구조</strong>: 정책 네트워크(Policy Net)와 타겟 네트워크(Target Net)가 분리된 구조를 채택하여 훈련 안정성을 향상시킵니다.</li>
+        </ul>
+
+        <div align="center">
+          <img width="80%" src="https://github.com/user-attachments/assets/3a4f4efe-7872-4d57-abb9-2c202cd97479" />
+          <p><em>그림 3 범주 식별 모듈 개략도 (a) 범주 식별 모듈 훈련 과정 (b) 범주 식별 모듈의 정책 네트워크 및 타겟 네트워크 구조</em></p>
+        </div>
+
+        <h2 id="4-실험-검증">4. 실험 검증</h2>
+        <p>논문에서는 실제 <strong>CFM56-7B</strong> 항공 엔진 데이터 세트를 사용하여 검증했습니다.</p>
+
+        <p><strong>표 1: 실제 항공 엔진 데이터 세트에서의 다양한 방법 성능 비교 (%)</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th align="left">방법 (Method)</th>
+                    <th align="center">F1 점수 (F1 Score)</th>
+                    <th align="center">정밀도 (Precision)</th>
+                    <th align="center">재현율 (Recall)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td align="left">D3QN</td>
+                    <td align="center">77.19 ± 3.81</td>
+                    <td align="center">80.71 ± 4.15</td>
+                    <td align="center">76.75 ± 3.88</td>
+                </tr>
+                <tr>
+                    <td align="left">DS + D3QN (언더샘플링)</td>
+                    <td align="center">68.15 ± 9.26</td>
+                    <td align="center">71.05 ± 9.10</td>
+                    <td align="center">68.00 ± 9.14</td>
+                </tr>
+                <tr>
+                    <td align="left">OS + D3QN (오버샘플링)</td>
+                    <td align="center">74.38 ± 5.07</td>
+                    <td align="center">81.20 ± 3.66</td>
+                    <td align="center">74.00 ± 4.90</td>
+                </tr>
+                <tr>
+                    <td align="left"><strong>CCRL (제안 방법)</strong></td>
+                    <td align="center"><strong>84.26 ± 4.62</strong></td>
+                    <td align="center"><strong>87.19 ± 4.34</strong></td>
+                    <td align="center"><strong>84.00 ± 4.77</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <ul>
+            <li><strong>데이터 구성</strong>: 정상 샘플 및 세 가지 전형적인 고장(가변 블리드 밸브(VBV) 고장, 배기 가스 온도 센서(EGTI) 고장, 총 온도 센서(TAT) 고장)을 포함합니다. 그 중 고장 샘플 수는 극히 적어(예: 훈련 세트의 특정 고장 범주는 14개 샘플에 불과함) 고도로 불균형한 시나리오에 속합니다.</li>
+            <li><strong>비교 기준</strong>:
+                <ol>
+                    <li>D3QN (기존 강화 학습)</li>
+                    <li>DS+D3QN (언더샘플링 + 강화 학습)</li>
+                    <li>OS+D3QN (오버샘플링 + 강화 학습)</li>
+                </ol>
+            </li>
+            <li><strong>실험 결과</strong>:
+                <ul>
+                    <li><strong>F1 점수</strong>: CCRL은 84.26%에 도달하여 비교 방법(다른 방법은 68%-77% 사이)보다 현저히 우수했습니다.</li>
+                    <li><strong>안정성</strong>: 여러 반복 실험에서 CCRL의 표준 편차가 가장 작았으며, 이는 무작위성에 직면했을 때 모델이 가장 안정적으로 작동함을 나타냅니다.</li>
+                    <li><strong>혼동 행렬 분석</strong>: 희소 고장(EGTI 등)에 대한 CCRL의 오보율 및 누락율은 기존 데이터 증강 방법보다 낮았습니다.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2 id="5-요약">5. 요약</h2>
+        <p>논문에서 제안한 CCRL 방법은 대조 학습의 특징 추출 능력과 강화 학습의 지속적인 의사 결정 능력을 결합하여 항공 엔진 고장 진단에서 데이터 불균형과 환경의 동적 변화라는 난제를 효과적으로 해결했습니다. GAN처럼 가상의 데이터를 생성할 필요 없이 기존 데이터의 가치를 충분히 발굴하여 소규모 샘플 조건에서의 장비 유지 보수에 대해 산업계에 새로운 해결책을 제공했습니다.</p>
+
+        <hr>
+
+        <h2 id="문헌-출처">문헌 출처</h2>
+        <p><strong>Paper Title</strong>: Continual contrastive reinforcement learning: Towards stronger agent for environment-aware fault diagnosis of aero-engines through long-term optimization under highly imbalance scenarios</p>
+        <p><strong>Journal</strong>: <em>Advanced Engineering Informatics</em> (Elsevier), Vol. 65, 2025</p>
+        <p><strong>DOI</strong>: <a href="https://doi.org/10.1016/j.aei.2025.103297">10.1016/j.aei.2025.103297</a></p>
+
+    </main>
+
+</body>
+</html>
